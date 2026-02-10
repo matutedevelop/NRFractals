@@ -1,7 +1,7 @@
 import numpy as np  # ty: ignore
 from typing import Literal, Self  # ty: ignore
-import matplotlib.pyplot as plt
-import seaborn as sns
+import matplotlib.pyplot as plt  #ty : ignore
+import seaborn as sns #ty : ignore
 
 
 class ComplexPolynomial:
