@@ -1,11 +1,9 @@
 import numpy as np  # ty: ignore
-import numba  # ty: ignore
+import cupy as cp  # ty: ignore
 from complex_polynomial import ComplexPolynomial  # ty: ignore
-import copy
-
-# temporary
-import seaborn as sns
-import matplotlib.pyplot as plt
+import copy  # ty: ignore
+import numpy.typing as ntp  # ty: ignore
+import cupy.typing as ctp  # ty: ignore
 
 
 def polynomial_to_solve(poly: ComplexPolynomial, b: float) -> ComplexPolynomial:
@@ -17,70 +15,60 @@ def polynomial_to_solve(poly: ComplexPolynomial, b: float) -> ComplexPolynomial:
     return new_poly
 
 
-def nr(
+def nr_vectorized(
     poly: ComplexPolynomial,
-    b: float,
-    *,
-    x0: np.complex128 = None,
-    epsilon: float = 1e-8,
+    x0: ctp.NDArray[np.complex64],
+    epsilon: float = 1e-5,
 ) -> None:
-    if x0 is None:
-        re = float(np.random.uniform(-500, 500))
-        im = float(np.random.uniform(-500, 500))
-        complex_number = complex(real=re, imag=im)
-        x0 = np.complex128(complex_number)
-
-    f = polynomial_to_solve(poly, b)
+    f_diff = poly.diff()
 
     iter_count = 0
-    while abs(f.eval(x0)).real > epsilon:
-
-        f_diff = f.diff().eval(x0)
-
-
-
-        if iter_count >= 1_000:
+    while cp.max(cp.abs(poly.evalv(x0))) > epsilon:
+        if iter_count >= 20:
             print("se llego al limite de iteraciones")
-            break
+            return x0
 
-
-        if f_diff == 0:
+        if cp.min(cp.abs(f_diff.evalv(x0))) == 0:
             error_message = f"{x0} is an Escape point"
             raise NewthonRaphsonEscapePoint(error_message)
 
-        x0 = x0 - f.eval(x0) / f.diff().eval(x0)
-
+        x0 = x0 - poly.evalv(x0) / f_diff.evalv(x0)
         iter_count += 1
-    print(iter_count)
+        print("======")
+        print(cp.max(cp.abs(poly.evalv(x0))))
+        print(cp.max(poly.evalv(x0)))
+        print("======")
+        print(iter_count)
+
     return x0
+
+
 
 
 class NewthonRaphsonEscapePoint(Exception):
     """
-    This exception is thrown by nr() when it encounters falls in an escape point within the max iterations provided. i.e. f'(xi) = 0
+    This exception is thrown by nr_vectorized() when it encounters falls in an escape point within the max iterations provided. i.e. f'(xi) = 0
     """
 
     pass
 
 
-# Temporary
-if __name__ == '__main__':
-
-    pol = ComplexPolynomial([-1, 0, 0, 1])
-
-    points = []
-
-    for _ in range(100):
-        r = np.round(nr(pol, 0), 8)
-        print(r)
-        points.append(r)
-
-        x = map(lambda x: x.real,points)
-        y = map(lambda x: x.imag,points)
-
-    sns.scatterplot(x=x,y=y)
-    plt.show()
-    pol.graph()
-
-    # pol = ComplexPolynomial([-1, 0, 0, 1])
-    # print(nr(pol, 0, x0=-(0.5)**(1/3)))
+# if __name__ == "__main__":
+#     # x = cp.linspace(-1, 1, 4)
+#     # y = (cp.linspace(-1, 1, 4) * 1j).astype("complex64")
+#     # z = (x + y).astype("complex64")
+#
+#     z_vec = cp.array([12 + 33j]).astype("complex64")
+#     z = np.complex64(12 + 3j)
+#
+#     pol = ComplexPolynomial([21, 121, 441, 21])
+#
+#     result = nr_vectorized(pol, z_vec)
+#     #result_normal = nr(pol, z)
+#
+#     print(result)
+#     # print(result_normal)
+#
+#     print("----------")
+#     # print(pol.eval(result_normal))
+#     print(cp.abs(pol.evalv(result)))
