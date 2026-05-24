@@ -1,8 +1,9 @@
 import numpy as np  # ty: ignore
 import numba  # ty: ignore
 from complex_polynomial import ComplexPolynomial  # ty: ignore
-from numpy import complex64, typing as ntp
+from numpy  import typing as ntp
 import copy
+import cupy
 
 
 def polynomial_to_solve(poly: ComplexPolynomial, b: float) -> ComplexPolynomial:
@@ -53,34 +54,52 @@ def nrv(
     b: float,
     *,
     x0: ntp.NDArray[np.complex128],
-    epsilon: float = 1e-6,
+    epsilon: float = 1e-8,
 ):
 
     f = polynomial_to_solve(poly, b)
-    
     f_image = f.evalv(x0)
-    
+
+    total_escape_point_mask = np.array([False * x0.shape[0]])
+
     iter_count = 0
-    while np.percentile(np.abs(f_image.real),95) > epsilon:
-
-        
+    while np.percentile(np.abs(f_image), 99) > epsilon:
         f_diff = f.diff().evalv(x0)
+        escape_ponint_mask = (f_diff == 0) | (np.abs(f_diff) < epsilon)
+        total_escape_point_mask = np.logical_or(
+            total_escape_point_mask, escape_ponint_mask
+        )
 
-        if iter_count >= 20:
+        if iter_count >= 40:
             print("se llego al limite de iteraciones")
             break
 
-        # if np.min(np.abs(f_diff.real)) == 0:
-        #     error_message = f"{x0} is an Escape point"
-        #     raise NewthonRaphsonEscapePoint(error_message)
+        if np.any(escape_ponint_mask):
+            f_diff[escape_ponint_mask] = 1e-5
+            # error_message = f"{x0} is an Escape point"
+            # raise NewthonRaphsonEscapePoint(error_message)
 
         x0 = x0 - f_image / f_diff
 
+        f_image = f.evalv(x0)
+
         iter_count += 1
-    
+
         print(f"iteration: {iter_count}")
-    print(iter_count)
-    return x0
+
+
+
+
+    f_image = f.evalv(x0)
+    converged_mask = np.abs(f_image) < epsilon
+    #x0 = x0[converged_mask]
+
+    print(f"ended with {iter_count} iteration")
+    return {
+        "idxs": converged_mask,
+        "result": x0,
+        "escape_point_mask": total_escape_point_mask,
+    }
 
 
 class NewthonRaphsonEscapePoint(Exception):
@@ -93,29 +112,4 @@ class NewthonRaphsonEscapePoint(Exception):
 
 # Temporary
 if __name__ == "__main__":
-    
-    import seaborn as sns
-    from matplotlib import pyplot as plt
-
-    pol = ComplexPolynomial([-1, 0, 0, 1])
-
-
-    x = np.linspace(-100,100,201)
-    px, py = np.meshgrid(x,x)
-
-    # points = []
-    points = px + py * 1j
-    points = points.flatten()
-
-
-    r = nrv(pol,0,x0=points)
-    
-
-    sns.scatterplot(x=r.real,y=r.imag)
-    plt.show()
-
-    sns.displot(x=r.real)
-    plt.show()
-
-    sns.displot(x=r.imag)
-    plt.show()
+    pass

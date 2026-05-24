@@ -2,28 +2,50 @@ from numba import complex128
 import numpy as np
 import pandas as pd
 from complex_polynomial import ComplexPolynomial
-from nr import nr
+from nr import nrv
 
-pol = ComplexPolynomial([3211,1,13,1,7,])
+pol = ComplexPolynomial(
+    [
+        3211,
+        1,
+        13,
+        1,
+        7,
+    ]
+)
 
-grid = [[x, y] for x in np.linspace(-3, 3, 100) for y in np.linspace(-3,3,100)]
-print('grid inicializada')
-#grid = np.zeros(10_000,10_000)
 
-# for i,x in enumerate(np.linspace(-3,3,10_000)):
-#     for j,y in enumerate(np.linspace(-3,3,10_000)):
-#         grid[i,j] = [x,y]
+x = np.linspace(-100, 100, 401)
+px, py = np.meshgrid(x, x)
 
-df = pd.DataFrame(grid, columns=["real", "img"])
-df['nr_result_x'] = 0
-df['nr_result_y'] = 0
+# points = []
+points = px + py * 1j
 
-for i,r in enumerate(df.iterrows()):
-    
-    z = complex128(complex(real=r[1][0],imag=r[1][1]))
-    z_result = nr(pol,0,x0=z)
-    df.iloc[i,2] = z_result.real
-    df.iloc[i,3] = z_result.imag
-    print("===========",i)
 
-df.to_csv('o.csv')
+points = points.flatten()
+
+print("grid inicializada")
+
+newthon_raphson_result = nrv(pol, 8, x0=points)
+z_result = newthon_raphson_result["result"]
+escape_point_mask = newthon_raphson_result["escape_point_mask"]
+idxs = newthon_raphson_result["idxs"]
+
+
+df = pd.DataFrame(
+    {
+        "z": points[idxs],
+        "zx": points[idxs].real,
+        "zy": points[idxs].imag,
+    }
+)
+df["nr_result_x"] = 0
+df["nr_result_y"] = 0
+df["is_escape"] = False
+
+
+df["nr_result_x"] = z_result.real
+df["nr_result_y"] = z_result.imag
+df["f(z)"] = pol.evalv(z_result)
+
+df.to_csv("o.csv")
