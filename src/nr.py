@@ -92,7 +92,8 @@ def nrv(
 
     f_image = f.evalv(x0)
     converged_mask = np.abs(f_image) < epsilon
-    #x0 = x0[converged_mask]
+    x0 = x0[converged_mask]
+    total_escape_point_mask = total_escape_point_mask[converged_mask]
 
     print(f"ended with {iter_count} iteration")
     return {

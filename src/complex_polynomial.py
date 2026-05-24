@@ -1,7 +1,8 @@
 import numpy as np  # ty: ignore
-from typing import Literal, Self  # ty: ignore
+from typing import  Self  # ty: ignore
 import matplotlib.pyplot as plt  #ty : ignore
 import seaborn as sns #ty : ignore
+from numpy import typing as ntp
 
 
 class ComplexPolynomial:
@@ -23,9 +24,20 @@ class ComplexPolynomial:
 
         return result
 
-    def evalv(self, x: list[np.complex128]) -> list[np.complex128]:
-        vectorized_eval = np.vectorize(self.eval)
-        return vectorized_eval(x)
+    def evalv(self, x: ntp.NDArray[np.complex64]) -> list[np.complex64]:
+        # vectorized_eval = np.vectorize(self.eval)
+        # return vectorized_eval(x)
+
+
+        result = np.zeros(x.shape[0],dtype="complex64")
+
+        for i, c in enumerate(self.coefs):
+            result += c * np.emath.power(x, i)
+
+        return result
+
+
+
 
     def diff(self) -> Self:
         new_coefs = [i * c for i, c in enumerate(self.coefs)][1:]

@@ -41,7 +41,7 @@ df = pd.DataFrame(
 )
 df["nr_result_x"] = 0
 df["nr_result_y"] = 0
-df["is_escape"] = False
+df["is_escape"] = escape_point_mask
 
 
 df["nr_result_x"] = z_result.real
